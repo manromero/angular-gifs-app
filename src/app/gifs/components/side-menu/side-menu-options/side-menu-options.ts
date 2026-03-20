@@ -1,4 +1,5 @@
-import { Component } from '@angular/core';
+import { GifsService } from '@/app/gifs/services/gifs.service';
+import { Component, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 
 interface MenuOption {
@@ -14,6 +15,8 @@ interface MenuOption {
   imports: [RouterLink, RouterLinkActive],
 })
 export class SideMenuOptions {
+  gifsService: GifsService = inject(GifsService);
+
   menuOptions: MenuOption[] = [
     {
       icon: 'fa-solid fa-chart-line',
