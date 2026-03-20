@@ -4,6 +4,7 @@ import { inject, Injectable, signal } from '@angular/core';
 import type { GiphyResponse } from '../interfaces/giphy.interfaces';
 import { Gif } from '../interfaces/gifs.interface';
 import { GifsMapper } from '../mapper/gifs.mapper';
+import { map } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -30,5 +31,20 @@ export class GifsService {
         this.trendingGifs.set(gifs);
         this.trendingGifsLoading.set(false);
       });
+  }
+
+  searchGifs(query: string) {
+    return this.http
+      .get<GiphyResponse>(`${environment.giphyUrl}/gifs/search`, {
+        params: {
+          api_key: environment.giphyApiKey,
+          limit: 20,
+          q: query,
+        },
+      })
+      .pipe(
+        map(({ data }) => data),
+        map((items) => GifsMapper.mapGiphyItemsToGifArray(items)),
+      );
   }
 }
