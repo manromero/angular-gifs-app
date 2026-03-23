@@ -1,10 +1,18 @@
 import { environment } from '@/environments/environment';
 import { HttpClient } from '@angular/common/http';
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal, effect } from '@angular/core';
 import type { GiphyResponse } from '../interfaces/giphy.interfaces';
 import type { Gif } from '../interfaces/gifs.interface';
 import { GifsMapper } from '../mapper/gifs.mapper';
 import { map, tap } from 'rxjs';
+
+const LOCAL_STORAGE_KEY = 'gifs_search_history';
+
+function loadSearchHistoryFromLocalStorage() {
+  const searchHistoryRaw = localStorage.getItem(LOCAL_STORAGE_KEY);
+  const searchHistory = searchHistoryRaw ? JSON.parse(searchHistoryRaw) : {};
+  return searchHistory;
+}
 
 @Injectable({
   providedIn: 'root',
@@ -14,7 +22,7 @@ export class GifsService {
   trendingGifs = signal<Gif[]>([]);
   trendingGifsLoading = signal(true);
 
-  searchHistory = signal<Record<string, Gif[]>>({});
+  searchHistory = signal<Record<string, Gif[]>>(loadSearchHistoryFromLocalStorage());
   searchHistoryKeys = computed<string[]>(() => {
     return Object.keys(this.searchHistory());
   });
@@ -51,13 +59,15 @@ export class GifsService {
         map(({ data }) => data),
         map((items) => GifsMapper.mapGiphyItemsToGifArray(items)),
         tap((items) => {
-          const key = query.toLowerCase();
-          this.searchHistory.update((prev) => ({ ...prev, [key]: items }));
-          // TODO MANRMERO
-          localStorage.setItem(key, JSON.stringify(items));
+          this.searchHistory.update((prev) => ({ ...prev, [query.toLowerCase()]: items }));
         }),
       );
   }
+
+  saveHistoryToStorageEffect = effect(() => {
+    const searchHistory = this.searchHistory();
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(searchHistory));
+  });
 
   getHistoryGifs(query: string): Gif[] {
     return this.searchHistory()[query] ?? [];
