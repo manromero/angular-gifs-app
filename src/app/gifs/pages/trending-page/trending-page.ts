@@ -1,29 +1,43 @@
-import { Component, inject, signal } from '@angular/core';
-import { GifsList } from '../../components/gifs-list/gifs-list';
-import { GifsService } from '../../services/gifs.service';
+import { AfterViewInit, Component, ElementRef, inject, signal, viewChild } from '@angular/core';
 
-// const imageUrls: string[] = [
-//   'https://flowbite.s3.amazonaws.com/docs/gallery/square/image.jpg',
-//   'https://flowbite.s3.amazonaws.com/docs/gallery/square/image-1.jpg',
-//   'https://flowbite.s3.amazonaws.com/docs/gallery/square/image-2.jpg',
-//   'https://flowbite.s3.amazonaws.com/docs/gallery/square/image-3.jpg',
-//   'https://flowbite.s3.amazonaws.com/docs/gallery/square/image-4.jpg',
-//   'https://flowbite.s3.amazonaws.com/docs/gallery/square/image-5.jpg',
-//   'https://flowbite.s3.amazonaws.com/docs/gallery/square/image-6.jpg',
-//   'https://flowbite.s3.amazonaws.com/docs/gallery/square/image-7.jpg',
-//   'https://flowbite.s3.amazonaws.com/docs/gallery/square/image-8.jpg',
-//   'https://flowbite.s3.amazonaws.com/docs/gallery/square/image-9.jpg',
-//   'https://flowbite.s3.amazonaws.com/docs/gallery/square/image-10.jpg',
-//   'https://flowbite.s3.amazonaws.com/docs/gallery/square/image-11.jpg',
-// ];
+import { GifsService } from '../../services/gifs.service';
+import { ScrollStateService } from '@/app/shared/services/scroll-state.service';
+
+const SCROLL_IS_AT_BOTTOM_MARGIN = 300;
 
 @Component({
   selector: 'app-dashboard-page',
   templateUrl: './trending-page.html',
-  imports: [GifsList],
 })
-export default class TrendingPage {
-  // gifs = signal(imageUrls);
-
+export default class TrendingPage implements AfterViewInit {
   gifsService = inject(GifsService);
+  scrollStateService = inject(ScrollStateService);
+
+  scrollDivRef = viewChild<ElementRef<HTMLDivElement>>('groupDiv');
+
+  ngAfterViewInit(): void {
+    const scrollDiv = this.scrollDivRef()?.nativeElement;
+    if (!scrollDiv) {
+      return;
+    }
+
+    scrollDiv.scrollTop = this.scrollStateService.trendingScrollState();
+  }
+
+  onScroll(event: Event) {
+    const scrollDiv = this.scrollDivRef()?.nativeElement;
+    if (!scrollDiv) {
+      return;
+    }
+
+    const { scrollTop, clientHeight, scrollHeight } = scrollDiv;
+
+    this.scrollStateService.trendingScrollState.set(scrollTop);
+
+    const isAtBottom = scrollTop + clientHeight + SCROLL_IS_AT_BOTTOM_MARGIN >= scrollHeight;
+
+    if (isAtBottom) {
+      this.gifsService.loadTrendingGifs();
+    }
+  }
 }

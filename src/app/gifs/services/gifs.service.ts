@@ -20,7 +20,17 @@ function loadSearchHistoryFromLocalStorage() {
 export class GifsService {
   private http = inject(HttpClient);
   trendingGifs = signal<Gif[]>([]);
-  trendingGifsLoading = signal(true);
+  trendingGifsLoading = signal(false);
+  private trendingPage = signal(0);
+
+  trendingGifsGroup = computed<Gif[][]>(() => {
+    const groups: Gif[][] = [];
+    for (let i = 0; i < this.trendingGifs().length; i += 3) {
+      groups.push(this.trendingGifs().slice(i, i + 3));
+    }
+    console.log('groups', groups);
+    return groups;
+  });
 
   searchHistory = signal<Record<string, Gif[]>>(loadSearchHistoryFromLocalStorage());
   searchHistoryKeys = computed<string[]>(() => {
@@ -32,16 +42,24 @@ export class GifsService {
   }
 
   loadTrendingGifs() {
+    if (this.trendingGifsLoading()) {
+      return;
+    }
+
+    this.trendingGifsLoading.set(true);
+
     this.http
       .get<GiphyResponse>(`${environment.giphyUrl}/gifs/trending`, {
         params: {
           api_key: environment.giphyApiKey,
           limit: 20,
+          offset: this.trendingPage() * 20,
         },
       })
       .subscribe((response) => {
         const gifs = GifsMapper.mapGiphyItemsToGifArray(response.data);
-        this.trendingGifs.set(gifs);
+        this.trendingGifs.update((prevGifs) => [...prevGifs, ...gifs]);
+        this.trendingPage.update((prevPage) => prevPage + 1);
         this.trendingGifsLoading.set(false);
       });
   }
